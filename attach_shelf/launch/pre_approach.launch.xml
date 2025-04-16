@@ -1,0 +1,11 @@
+<!-- example.launch.xml -->
+
+<launch>
+
+  <!-- args that can be set from the command line or a default will be used -->
+  <!-- <arg name="test_arg" default="0"/> -->
+
+  <!-- start a turtlesim_node in the turtlesim1 namespace -->
+  <node pkg="attach_shelf" exec="pre_approach_node" name="pre_approach" output="screen"/>
+
+</launch>
