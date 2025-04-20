@@ -9,126 +9,182 @@
 
 using namespace std::chrono_literals;
 
-class Pre_approach : public rclcpp::Node {
+class PreApproach : public rclcpp::Node {
 public:
-  Pre_approach(std::string scan_topic, std::string cmd_topic,
-               std::string odom_topic)
-      : Node("pre_approach"), recorded_obstacle_triggered_yaw(false) {
-    // Obstacle parameter setup
-    auto obstacle_param_desc = rcl_interfaces::msg::ParameterDescriptor{};
-    obstacle_param_desc.description =
-        "Sets the distance to the obstacle at which the robot will stop";
-    this->declare_parameter<float>("obstacle", 1.0, obstacle_param_desc);
-    this->get_parameter("obstacle", obstacle);
+  // Robot states
+  enum class State {
+    APPROACHING, // Moving toward obstacle
+    TURNING,     // Turning to face the shelf
+    COMPLETED    // Task completed
+  };
 
-    // Degrees parameter setup
-    auto degrees_param_desc = rcl_interfaces::msg::ParameterDescriptor{};
-    degrees_param_desc.description =
-        "Sets the amount of degrees the robot should turn to face the shelf";
-    this->declare_parameter<float>("degrees", 90.0, degrees_param_desc);
-    this->get_parameter("degrees", degrees);
+  PreApproach(const std::string &scan_topic, const std::string &cmd_topic,
+              const std::string &odom_topic)
+      : Node("pre_approach"), current_state_(State::APPROACHING) {
+    // Initialize parameters
+    initializeParameters();
 
-    // subscribers assignation
-    scan_sub = this->create_subscription<sensor_msgs::msg::LaserScan>(
+    // Create subscriptions
+    scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
         scan_topic, 10,
-        std::bind(&Pre_approach::Scan_callback, this, std::placeholders::_1));
-    odom_sub = this->create_subscription<nav_msgs::msg::Odometry>(
-        odom_topic, 10,
-        std::bind(&Pre_approach::Odom_callback, this, std::placeholders::_1));
+        std::bind(&PreApproach::scanCallback, this, std::placeholders::_1));
 
-    // publisher assignation
-    cmd_pub = this->create_publisher<geometry_msgs::msg::Twist>(cmd_topic, 10);
+    odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+        odom_topic, 10,
+        std::bind(&PreApproach::odomCallback, this, std::placeholders::_1));
+
+    // Create publisher and timer
+    cmd_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(cmd_topic, 10);
     timer_ = this->create_wall_timer(
-        500ms, std::bind(&Pre_approach::Cmd_callback, this));
+        100ms, std::bind(&PreApproach::timerCallback, this));
+
+    RCLCPP_INFO(this->get_logger(),
+                "PreApproach node initialized. Moving forward until %.2f m "
+                "from the obstacle!",
+                obstacle_distance_);
   }
 
-  void Scan_callback(const sensor_msgs::msg::LaserScan msg) {
-    if (!obstacle_reached) {
-      cmd_msg.linear.x = 0.5;
-      cmd_msg.linear.y = 0;
-      cmd_msg.angular.z = 0;
-      if (msg.ranges[360] < obstacle) {
-        obstacle_reached = true;
-        RCLCPP_INFO(
-            this->get_logger(),
-            "Below %.2f m of the obstacle, GOING TO TURN for %.2f degrees",
-            obstacle, degrees);
-      }
-    } else if (obstacle_reached && !angle_reached) {
-      if (!recorded_obstacle_triggered_yaw) {
-        obstacle_triggered_yaw = yaw;
-        recorded_obstacle_triggered_yaw = true;
-      }
-      cmd_msg.linear.x = 0;
-      cmd_msg.linear.y = 0;
-      cmd_msg.angular.z = 0.4 * (degrees / abs(degrees));
-      if (abs(obstacle_triggered_yaw - yaw) > abs(degrees * M_PI / 180)) {
-        angle_reached = true;
-        RCLCPP_INFO(this->get_logger(), "Angle reached ! Shutting down..");
-        rclcpp::shutdown();
-      }
-    } else {
-      cmd_msg.linear.x = 0;
-      cmd_msg.linear.y = 0;
-      cmd_msg.angular.z = 0;
+private:
+  // Constants
+  static constexpr int SCAN_CENTER_INDEX = 360;
+  static constexpr double FORWARD_SPEED = 0.5;
+  static constexpr double TURN_SPEED = 0.4;
+
+  void initializeParameters() {
+    // Obstacle parameter
+    auto obstacle_param_desc = rcl_interfaces::msg::ParameterDescriptor{};
+    obstacle_param_desc.description =
+        "Distance to the obstacle at which the robot will stop (meters)";
+    this->declare_parameter<float>("obstacle", 1.0, obstacle_param_desc);
+    this->get_parameter("obstacle", obstacle_distance_);
+
+    // Degrees parameter
+    auto degrees_param_desc = rcl_interfaces::msg::ParameterDescriptor{};
+    degrees_param_desc.description =
+        "Amount of degrees the robot should turn to face the shelf";
+    this->declare_parameter<float>("degrees", 90.0, degrees_param_desc);
+    this->get_parameter("degrees", turn_degrees_);
+  }
+
+  void scanCallback(const sensor_msgs::msg::LaserScan &msg) {
+    // Safety check for index bounds
+    if (SCAN_CENTER_INDEX >= msg.ranges.size()) {
+      RCLCPP_ERROR(this->get_logger(),
+                   "Scan index %d is out of bounds (size: %zu)!",
+                   SCAN_CENTER_INDEX, msg.ranges.size());
+      return;
+    }
+
+    switch (current_state_) {
+    case State::APPROACHING:
+      handleApproachingState(msg);
+      break;
+    case State::TURNING:
+      handleTurningState();
+      break;
+    case State::COMPLETED:
+      // Keep the robot stopped
+      stopRobot();
+      break;
     }
   }
 
-  void Odom_callback(const nav_msgs::msg::Odometry msg) {
+  void handleApproachingState(const sensor_msgs::msg::LaserScan &msg) {
+    if (msg.ranges[SCAN_CENTER_INDEX] < obstacle_distance_) {
+      // Obstacle reached, transition to turning state
+      current_state_ = State::TURNING;
+      initial_yaw_ = current_yaw_;
+
+      RCLCPP_INFO(this->get_logger(),
+                  "Obstacle detected at %.2f m. Turning %.2f degrees...",
+                  msg.ranges[SCAN_CENTER_INDEX], turn_degrees_);
+
+      // Stop and prepare to turn
+      stopRobot();
+      cmd_msg_.angular.z = calculateTurnSpeed();
+    } else {
+      // Continue moving forward
+      cmd_msg_.linear.x = FORWARD_SPEED;
+    }
+  }
+
+  void handleTurningState() {
+    // Check if we've reached our target angle
+    double angle_turned = getAngleTurned();
+    double target_angle = std::abs(turn_degrees_ * M_PI / 180.0);
+
+    if (angle_turned >= target_angle) {
+      // Turning completed
+      current_state_ = State::COMPLETED;
+      RCLCPP_INFO(this->get_logger(),
+                  "Turn completed (%.2f degrees). Shutting down...",
+                  angle_turned * 180.0 / M_PI);
+      stopRobot();
+      rclcpp::shutdown();
+    }
+  }
+
+  double getAngleTurned() {
+    double delta = std::abs(current_yaw_ - initial_yaw_);
+    // Handle wrap-around (when crossing +/-PI boundary)
+    if (delta > M_PI) {
+      delta = 2.0 * M_PI - delta;
+    }
+    return delta;
+  }
+
+  double calculateTurnSpeed() {
+    // Return speed with appropriate sign based on turn direction
+    return TURN_SPEED * (turn_degrees_ > 0 ? 1.0 : -1.0);
+  }
+
+  void stopRobot() {
+    cmd_msg_.linear.x = 0.0;
+    cmd_msg_.linear.y = 0.0;
+    cmd_msg_.angular.z = 0.0;
+  }
+
+  void odomCallback(const nav_msgs::msg::Odometry &msg) {
+    tf2::Quaternion q;
     q.setX(msg.pose.pose.orientation.x);
     q.setY(msg.pose.pose.orientation.y);
     q.setZ(msg.pose.pose.orientation.z);
     q.setW(msg.pose.pose.orientation.w);
 
-    m.setRotation(q);
-    m.getRPY(roll, pitch, yaw);
+    tf2::Matrix3x3 m(q);
+    double roll, pitch;
+    m.getRPY(roll, pitch, current_yaw_);
   }
 
-  void Cmd_callback() {
-    if (!moving_forward_msg) {
-      RCLCPP_INFO(this->get_logger(),
-                  "Moving forward until %.2f m from the obstacle !", obstacle);
-      moving_forward_msg = true;
-    }
-    cmd_pub->publish(cmd_msg);
-  }
+  void timerCallback() { cmd_pub_->publish(cmd_msg_); }
 
-private:
-  std::string scan_topic;
-  std::string cmd_topic;
-  std::string odom_topic;
+  // Subscriptions
+  rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
 
-  rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub;
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub;
-  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub;
-
-  sensor_msgs::msg::LaserScan scan_data;
-  geometry_msgs::msg::Twist cmd_msg;
-  nav_msgs::msg::Odometry odom_buffer;
-
+  // Publisher and timer
+  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
 
-  tf2::Quaternion q;
-  tf2::Matrix3x3 m;
-  double roll, pitch, yaw;
-  bool recorded_obstacle_triggered_yaw = false;
+  // Robot state
+  State current_state_;
+  geometry_msgs::msg::Twist cmd_msg_;
 
-  bool obstacle_reached = false;
-  bool angle_reached = false;
-  bool moving_forward_msg = false;
+  // Configuration parameters
+  float obstacle_distance_;
+  float turn_degrees_;
 
-  float obstacle;
-  float obstacle_triggered_yaw;
-  float degrees;
+  // Current pose tracking
+  double current_yaw_ = 0.0;
+  double initial_yaw_ = 0.0;
 };
 
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
-  std::shared_ptr<Pre_approach> pre_approach_node =
-      std::make_shared<Pre_approach>(
-          "/scan", "/diffbot_base_controller/cmd_vel_unstamped",
-          "/diffbot_base_controller/odom");
-  rclcpp::spin(pre_approach_node);
+  auto node = std::make_shared<PreApproach>(
+      "/scan", "/diffbot_base_controller/cmd_vel_unstamped",
+      "/diffbot_base_controller/odom");
+  rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;
 }
