@@ -46,7 +46,7 @@ public:
 
 private:
   // Constants
-  static constexpr int SCAN_CENTER_INDEX = 360;
+  static constexpr int SCAN_CENTER_INDEX = 540;
   static constexpr double FORWARD_SPEED = 0.5;
   static constexpr double TURN_SPEED = 0.4;
 

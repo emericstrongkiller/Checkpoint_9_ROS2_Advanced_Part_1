@@ -3,8 +3,8 @@
 <launch>
 
   <!-- args that can be set from the command line or a default will be used -->
-  <arg name="obstacle" default="1.0"/>
-  <arg name="degrees" default="90.0"/>
+  <arg name="obstacle" default="0.35"/>
+  <arg name="degrees" default="-90.0"/>
 
   <!-- start pre_approach node -->
   <node pkg="attach_shelf" exec="pre_approach_node" name="pre_approach" output="screen">
