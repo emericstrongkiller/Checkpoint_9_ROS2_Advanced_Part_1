@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /TF1
         - /LaserScan1
       Splitter Ratio: 0.5323529243469238
     Tree Height: 486
@@ -75,11 +76,11 @@ Visualization Manager:
           Value: true
         robot_top_cover_link:
           Value: true
-      Marker Scale: 1
+      Marker Scale: 0.30000001192092896
       Name: TF
       Show Arrows: true
       Show Axes: true
-      Show Names: false
+      Show Names: true
       Tree:
         odom:
           robot_base_footprint:
@@ -112,78 +113,20 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /rb1_robot/robot_description
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        robot_base_docking_contact_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        robot_base_footprint:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        robot_base_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        robot_evelator_base_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        robot_evelator_platform_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        robot_front_cover_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        robot_front_laser_base_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        robot_left_wheel_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        robot_omni_backwheel_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        robot_omni_front_leftwheel_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        robot_omni_front_rightwheel_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        robot_right_wheel_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        robot_top_cover_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Mass Properties:
         Inertia: false
         Mass: false
       Name: RobotModel
       TF Prefix: ""
       Update Interval: 0
-      Value: true
+      Value: false
       Visual Enabled: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
@@ -264,26 +207,23 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz_default_plugins/Orbit
-      Distance: 4.581565856933594
+      Class: rviz_default_plugins/FPS
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Focal Point:
-        X: 0.9481298923492432
-        Y: -1.1647603511810303
-        Z: 1.312151551246643
-      Focal Shape Fixed Size: true
-      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4503978490829468
+      Pitch: 0.6403886079788208
+      Position:
+        X: 3.925508737564087
+        Y: -0.6836161017417908
+        Z: 1.3600196838378906
       Target Frame: <Fixed Frame>
-      Value: Orbit (rviz)
-      Yaw: 3.82540225982666
+      Value: FPS (rviz_default_plugins)
+      Yaw: 0.11380983889102936
     Saved: ~
 Window Geometry:
   Displays:

@@ -3,7 +3,7 @@
 <launch>
 
   <!-- args that can be set from the command line or a default will be used -->
-  <arg name="obstacle" default="0.35"/>
+  <arg name="obstacle" default="0.40"/>
   <arg name="degrees" default="-90.0"/>
 
   <!-- start pre_approach node -->
