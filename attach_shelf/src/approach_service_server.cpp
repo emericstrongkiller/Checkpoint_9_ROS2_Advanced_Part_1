@@ -128,10 +128,10 @@ private:
 
       // clusters results
       if (clusters.size() < 2 || clusters.size() > 2) {
-        RCLCPP_WARN(this->get_logger(),
-                    "Found %zu clusters instead of 2, no frame created, "
-                    "returning failed signal..",
-                    clusters.size());
+        RCLCPP_DEBUG(this->get_logger(),
+                     "Found %zu clusters instead of 2, no frame created, "
+                     "returning failed signal..",
+                     clusters.size());
         failed_scanning = true;
       } else {
         RCLCPP_DEBUG(this->get_logger(), "found %zu clusters !",
@@ -227,7 +227,6 @@ private:
         }
       }
     }
-
     if (current_state_ == State::MOVING_TO_SHELF && attach_to_shelf_) {
       try {
         // Get offset between shelf's TF and robot_chassis's TF
@@ -312,8 +311,10 @@ private:
   }
 
   void timer_callback() {
-    // send cmd to robot
-    cmd_vel_pub_->publish(cmd_msg);
+    if (attach_to_shelf_) {
+      // send cmd to robot IF THE SERVICE HAS BEEN CALLED
+      cmd_vel_pub_->publish(cmd_msg);
+    }
   }
 
   // constants

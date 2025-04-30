@@ -30,13 +30,17 @@ if(BUILD_TESTING)
 endif()
 
 add_executable(pre_approach_node src/pre_approach.cpp)
-ament_target_dependencies(pre_approach_node rclcpp sensor_msgs geometry_msgs nav_msgs tf2_ros)
+ament_target_dependencies(pre_approach_node rclcpp sensor_msgs geometry_msgs nav_msgs tf2_ros custom_interfaces)
+
+add_executable(pre_approach_v2_node src/pre_approach_v2.cpp)
+ament_target_dependencies(pre_approach_v2_node rclcpp sensor_msgs geometry_msgs nav_msgs tf2_ros custom_interfaces)
 
 add_executable(approach_service_node src/approach_service_server.cpp)
 ament_target_dependencies(approach_service_node rclcpp sensor_msgs std_srvs custom_interfaces tf2_geometry_msgs std_msgs)
 
 install(TARGETS
 		pre_approach_node
+		pre_approach_v2_node
 		approach_service_node
 		DESTINATION lib/${PROJECT_NAME}
 )

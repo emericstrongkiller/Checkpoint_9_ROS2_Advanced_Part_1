@@ -1,3 +1,4 @@
+#include "custom_interfaces/srv/go_to_loading.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
@@ -15,14 +16,18 @@ public:
   enum class State {
     APPROACHING, // Moving toward obstacle
     TURNING,     // Turning to face the shelf
-    COMPLETED    // Task completed
+    CALLING_SERVICE
   };
 
   PreApproach(const std::string &scan_topic, const std::string &cmd_topic,
-              const std::string &odom_topic)
+              const std::string &odom_topic, const std::string &service_name)
       : Node("pre_approach"), current_state_(State::APPROACHING) {
     // Initialize parameters
     initializeParameters();
+
+    // Create approach service client
+    approach_service_client_ =
+        this->create_client<custom_interfaces::srv::GoToLoading>(service_name);
 
     // Create subscriptions
     scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
@@ -64,6 +69,13 @@ private:
         "Amount of degrees the robot should turn to face the shelf";
     this->declare_parameter<float>("degrees", 90.0, degrees_param_desc);
     this->get_parameter("degrees", turn_degrees_);
+
+    // final approach parameter
+    auto approach_param_desc = rcl_interfaces::msg::ParameterDescriptor{};
+    approach_param_desc.description =
+        "Boolean to choose if the robot moves under shelf and lifts it or not";
+    this->declare_parameter<bool>("final_approach", false, approach_param_desc);
+    this->get_parameter("final_approach", attach_to_shelf);
   }
 
   void scanCallback(const sensor_msgs::msg::LaserScan &msg) {
@@ -82,9 +94,10 @@ private:
     case State::TURNING:
       handleTurningState();
       break;
-    case State::COMPLETED:
-      // Keep the robot stopped
-      stopRobot();
+    case State::CALLING_SERVICE:
+      if (!service_called) {
+        approach_service_call();
+      }
       break;
     }
   }
@@ -115,12 +128,13 @@ private:
 
     if (angle_turned >= target_angle) {
       // Turning completed
-      current_state_ = State::COMPLETED;
-      RCLCPP_INFO(this->get_logger(),
-                  "Turn completed (%.2f degrees). Shutting down...",
+      current_state_ = State::CALLING_SERVICE;
+      RCLCPP_INFO(this->get_logger(), "Turn completed (%.2f degrees)",
                   angle_turned * 180.0 / M_PI);
+      RCLCPP_INFO(this->get_logger(), "current_state_: %d",
+                  static_cast<int>(current_state_));
+
       stopRobot();
-      rclcpp::shutdown();
     }
   }
 
@@ -156,7 +170,28 @@ private:
     m.getRPY(roll, pitch, current_yaw_);
   }
 
-  void timerCallback() { cmd_pub_->publish(cmd_msg_); }
+  void approach_service_call() {
+    auto request =
+        std::make_shared<custom_interfaces::srv::GoToLoading::Request>();
+    request->attach_to_shelf = attach_to_shelf;
+    approach_service_client_->async_send_request(request);
+
+    RCLCPP_INFO(this->get_logger(), "attach_to_shelf: %d",
+                request->attach_to_shelf);
+
+    service_called = true;
+  }
+
+  void timerCallback() {
+    if (current_state_ != State::CALLING_SERVICE) {
+      // send commands UNTIL service has been called
+      cmd_pub_->publish(cmd_msg_);
+    }
+  }
+
+  // approach service client
+  rclcpp::Client<custom_interfaces::srv::GoToLoading>::SharedPtr
+      approach_service_client_;
 
   // Subscriptions
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
@@ -173,6 +208,10 @@ private:
   // Configuration parameters
   float obstacle_distance_;
   float turn_degrees_;
+  bool attach_to_shelf;
+
+  // rservice call parameters
+  bool service_called = false;
 
   // Current pose tracking
   double current_yaw_ = 0.0;
@@ -183,7 +222,7 @@ int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<PreApproach>(
       "/scan", "/diffbot_base_controller/cmd_vel_unstamped",
-      "/diffbot_base_controller/odom");
+      "/diffbot_base_controller/odom", "/approach_shelf");
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;
