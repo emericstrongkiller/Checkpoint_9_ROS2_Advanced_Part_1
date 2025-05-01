@@ -83,25 +83,31 @@ private:
       const custom_interfaces::srv::GoToLoading::Request::SharedPtr request,
       custom_interfaces::srv::GoToLoading::Response::SharedPtr response) {
     current_state_ = State::MOVING_TO_SHELF;
+    service_called = true;
     attach_to_shelf_ = request->attach_to_shelf;
     RCLCPP_INFO(this->get_logger(), "attach_to_shelf IN HANDLE APPROACH: %d",
                 attach_to_shelf_);
     while (rclcpp::ok()) {
+      if (current_state_ == State::ATTACH_TO_SHELF && shelf_attach_done) {
+        response->complete = true;
+        break;
+      }
+      if (!attach_to_shelf_ && published_shelf_tf) {
+        response->complete = true;
+        break;
+      }
       if (failed_scanning) {
         response->complete = false;
         break;
       }
-      if (done_scanning && !attach_to_shelf_) {
-        response->complete = true;
-      } else if (final_approach_done && attach_to_shelf_) {
-        response->complete = true;
-      } else {
-      }
     }
+    // terminate service node when done
+    RCLCPP_INFO(this->get_logger(), "Approach service now shutting down..");
+    rclcpp::shutdown();
   }
 
   void laser_callback(const sensor_msgs::msg::LaserScan &msg) {
-    if (!approach_done) {
+    if (!approach_done && service_called) {
       std::vector<std::vector<int>> clusters;
       std::vector<int> current;
 
@@ -219,6 +225,10 @@ private:
 
           // 5. Broadcast the transform
           static_tf_broadcaster->sendTransform(transform_odom_to_cart);
+
+          // let the client know the transform was brodcasted successfully
+          published_shelf_tf = true;
+
           rclcpp::sleep_for(200ms);
         } catch (const tf2::TransformException &ex) {
           RCLCPP_WARN(this->get_logger(), "Could not transform %s to odom: %s",
@@ -307,6 +317,7 @@ private:
       std_msgs::msg::String msg;
       msg.data = "";
       shelf_attach_pub->publish(msg);
+      shelf_attach_done = true;
     }
   }
 
@@ -348,9 +359,12 @@ private:
 
   // shelf scanning logic
   bool failed_scanning = false;
+  bool published_shelf_tf = false;
 
   // indications of end of states
   bool approach_done = false;
+  bool service_called = false;
+  bool shelf_attach_done = false;
 
   bool final_approach_done = false;
   bool process_done = false;

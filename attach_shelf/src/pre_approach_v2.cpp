@@ -1,6 +1,8 @@
 #include "custom_interfaces/srv/go_to_loading.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
+#include "rclcpp/future_return_code.hpp"
+#include "rclcpp/logging.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "tf2/LinearMath/Matrix3x3.h"
 #include "tf2/LinearMath/Quaternion.h"
@@ -21,7 +23,10 @@ public:
 
   PreApproach(const std::string &scan_topic, const std::string &cmd_topic,
               const std::string &odom_topic, const std::string &service_name)
-      : Node("pre_approach"), current_state_(State::APPROACHING) {
+      : Node("pre_approach"),
+        request(
+            std::make_shared<custom_interfaces::srv::GoToLoading::Request>()),
+        current_state_(State::APPROACHING) {
     // Initialize parameters
     initializeParameters();
 
@@ -67,7 +72,7 @@ private:
     auto degrees_param_desc = rcl_interfaces::msg::ParameterDescriptor{};
     degrees_param_desc.description =
         "Amount of degrees the robot should turn to face the shelf";
-    this->declare_parameter<float>("degrees", 90.0, degrees_param_desc);
+    this->declare_parameter<int>("degrees", 90.0, degrees_param_desc);
     this->get_parameter("degrees", turn_degrees_);
 
     // final approach parameter
@@ -97,6 +102,8 @@ private:
     case State::CALLING_SERVICE:
       if (!service_called) {
         approach_service_call();
+      } else {
+        check_service_answer();
       }
       break;
     }
@@ -109,7 +116,7 @@ private:
       initial_yaw_ = current_yaw_;
 
       RCLCPP_INFO(this->get_logger(),
-                  "Obstacle detected at %.2f m. Turning %.2f degrees...",
+                  "Obstacle detected at %.2f m. Turning %d degrees...",
                   msg.ranges[SCAN_CENTER_INDEX], turn_degrees_);
 
       // Stop and prepare to turn
@@ -171,15 +178,46 @@ private:
   }
 
   void approach_service_call() {
-    auto request =
-        std::make_shared<custom_interfaces::srv::GoToLoading::Request>();
     request->attach_to_shelf = attach_to_shelf;
-    approach_service_client_->async_send_request(request);
-
-    RCLCPP_INFO(this->get_logger(), "attach_to_shelf: %d",
-                request->attach_to_shelf);
+    service_future_ =
+        approach_service_client_->async_send_request(request).future.share();
+    RCLCPP_INFO(this->get_logger(), "CALLED Service with attach_to_shelf = %d",
+                static_cast<int>(request->attach_to_shelf));
 
     service_called = true;
+  }
+
+  void check_service_answer() {
+    if (service_future_.wait_for(0s) == std::future_status::ready &&
+        !service_answered) {
+      auto result = service_future_.get();
+
+      if (attach_to_shelf) {
+        if (result->complete == false) {
+          RCLCPP_INFO(this->get_logger(),
+                      "laser failed, less than 2 legs detected, can't go on "
+                      "with shelf approach/attach");
+        } else {
+          RCLCPP_INFO(this->get_logger(),
+                      "Service completed ! attached to shelf");
+        }
+      } else {
+        if (result->complete) {
+          RCLCPP_INFO(this->get_logger(),
+                      "Service completed ! frame published");
+        } else {
+          RCLCPP_INFO(this->get_logger(),
+                      "laser failed, less than 2 legs detected, can't publish "
+                      "shelf frame..");
+        }
+      }
+
+      // shutdown node when service has completed
+      RCLCPP_INFO(this->get_logger(), "Approach node now shutting down..");
+      rclcpp::shutdown();
+
+      service_answered = true;
+    }
   }
 
   void timerCallback() {
@@ -189,9 +227,12 @@ private:
     }
   }
 
-  // approach service client
+  // approach service client & request
   rclcpp::Client<custom_interfaces::srv::GoToLoading>::SharedPtr
       approach_service_client_;
+  std::shared_future<custom_interfaces::srv::GoToLoading::Response::SharedPtr>
+      service_future_;
+  custom_interfaces::srv::GoToLoading::Request::SharedPtr request;
 
   // Subscriptions
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
@@ -207,11 +248,12 @@ private:
 
   // Configuration parameters
   float obstacle_distance_;
-  float turn_degrees_;
+  int turn_degrees_;
   bool attach_to_shelf;
 
   // rservice call parameters
   bool service_called = false;
+  bool service_answered = false;
 
   // Current pose tracking
   double current_yaw_ = 0.0;

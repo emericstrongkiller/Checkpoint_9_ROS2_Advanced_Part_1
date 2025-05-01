@@ -11,10 +11,10 @@ def generate_launch_description():
         "obstacle", default_value="0.40", description="Obstacle distance threshold"
     )
     degrees_arg = DeclareLaunchArgument(
-        "degrees", default_value="-90.0", description="Degrees to turn"
+        "degrees", default_value="-90", description="Degrees to turn"
     )
     approach_arg = DeclareLaunchArgument(
-        "final_approach", default_value="true", description="final approach choice (1||0)"
+        "final_approach", default_value="false", description="final approach choice (1||0)"
     )
 
     # Define pre_approach node

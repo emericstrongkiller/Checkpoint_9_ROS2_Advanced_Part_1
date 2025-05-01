@@ -54,6 +54,8 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
+        cart_frame:
+          Value: true
         odom:
           Value: true
         robot_base_docking_contact_link:
@@ -83,6 +85,8 @@ Visualization Manager:
       Show Names: true
       Tree:
         odom:
+          cart_frame:
+            {}
           robot_base_footprint:
             robot_base_link:
               robot_evelator_base_link:
@@ -113,20 +117,78 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /rb1_robot/robot_description
-      Enabled: false
+      Enabled: true
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
+        robot_base_docking_contact_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        robot_base_footprint:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        robot_base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        robot_evelator_base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        robot_evelator_platform_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        robot_front_cover_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        robot_front_laser_base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        robot_left_wheel_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        robot_omni_backwheel_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        robot_omni_front_leftwheel_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        robot_omni_front_rightwheel_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        robot_right_wheel_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        robot_top_cover_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
       Mass Properties:
         Inertia: false
         Mass: false
       Name: RobotModel
       TF Prefix: ""
       Update Interval: 0
-      Value: false
+      Value: true
       Visual Enabled: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
@@ -216,14 +278,14 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6403886079788208
+      Pitch: 0.6203887462615967
       Position:
-        X: 3.925508737564087
-        Y: -0.6836161017417908
-        Z: 1.3600196838378906
+        X: 6.539211750030518
+        Y: -2.3797945976257324
+        Z: 1.7095203399658203
       Target Frame: <Fixed Frame>
       Value: FPS (rviz_default_plugins)
-      Yaw: 0.11380983889102936
+      Yaw: 2.3788115978240967
     Saved: ~
 Window Geometry:
   Displays:
