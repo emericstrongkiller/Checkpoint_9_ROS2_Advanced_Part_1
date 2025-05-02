@@ -12,6 +12,9 @@ find_package(rclcpp_components REQUIRED)
 find_package(composition REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -27,17 +30,21 @@ endif()
 
 include_directories(include)
 
-add_library(moverobot_component SHARED src/moverobot_component.cpp)
-target_compile_definitions(moverobot_component PRIVATE "COMPOSITION_BUILDING_DLL")
-ament_target_dependencies(moverobot_component
+add_library(preapproach_component SHARED src/preapproach_component.cpp)
+target_compile_definitions(preapproach_component PRIVATE "COMPOSITION_BUILDING_DLL")
+ament_target_dependencies(preapproach_component
   "rclcpp"
   "rclcpp_components"
-  "geometry_msgs")
-rclcpp_components_register_nodes(moverobot_component "my_components::MoveRobot")
-set(node_plugins "${node_plugins}my_components::MoveRobot;$<TARGET_FILE:moverobot_component>\n")
+  "geometry_msgs"
+  "nav_msgs"
+  "sensor_msgs"
+  "tf2_geometry_msgs"
+  "tf2_ros")
+rclcpp_components_register_nodes(preapproach_component "my_components::PreApproach")
+set(node_plugins "${node_plugins}my_components::PreApproach;$<TARGET_FILE:preapproach_component>\n")
 
 install(TARGETS
-  moverobot_component
+  preapproach_component
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
