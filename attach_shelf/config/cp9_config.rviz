@@ -54,8 +54,6 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        cart_frame:
-          Value: true
         odom:
           Value: true
         robot_base_docking_contact_link:
@@ -78,15 +76,13 @@ Visualization Manager:
           Value: true
         robot_top_cover_link:
           Value: true
-      Marker Scale: 0.30000001192092896
+      Marker Scale: 0.6000000238418579
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
         odom:
-          cart_frame:
-            {}
           robot_base_footprint:
             robot_base_link:
               robot_evelator_base_link:
@@ -136,18 +132,22 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         robot_evelator_base_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         robot_evelator_platform_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         robot_front_cover_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         robot_front_laser_base_link:
           Alpha: 1
           Show Axes: false
@@ -182,6 +182,7 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
       Mass Properties:
         Inertia: false
         Mass: false
@@ -212,7 +213,7 @@ Visualization Manager:
       Position Transformer: XYZ
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.009999999776482582
+      Size (m): 0.03999999910593033
       Style: Flat Squares
       Topic:
         Depth: 5

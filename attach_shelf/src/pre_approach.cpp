@@ -62,7 +62,7 @@ private:
     auto degrees_param_desc = rcl_interfaces::msg::ParameterDescriptor{};
     degrees_param_desc.description =
         "Amount of degrees the robot should turn to face the shelf";
-    this->declare_parameter<float>("degrees", 90.0, degrees_param_desc);
+    this->declare_parameter<int>("degrees", 90, degrees_param_desc);
     this->get_parameter("degrees", turn_degrees_);
   }
 
@@ -96,7 +96,7 @@ private:
       initial_yaw_ = current_yaw_;
 
       RCLCPP_INFO(this->get_logger(),
-                  "Obstacle detected at %.2f m. Turning %.2f degrees...",
+                  "Obstacle detected at %.2f m. Turning %d degrees...",
                   msg.ranges[SCAN_CENTER_INDEX], turn_degrees_);
 
       // Stop and prepare to turn
@@ -172,7 +172,7 @@ private:
 
   // Configuration parameters
   float obstacle_distance_;
-  float turn_degrees_;
+  int turn_degrees_;
 
   // Current pose tracking
   double current_yaw_ = 0.0;

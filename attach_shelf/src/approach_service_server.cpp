@@ -268,22 +268,39 @@ private:
         RCLCPP_DEBUG(this->get_logger(), "Angle_offset: %f", yaw);
 
         if (cart_distance < DISTANCE_THRESHOLD) {
-          // ADD OTHER IF HERE TO TEST THE 30CM INCREMENT
-          cmd_msg.linear.x = 0.0;
-          cmd_msg.angular.z = 0.0;
-          // approach_done !!!!
-          approach_done = true;
-          last_triggered_time =
-              this->get_clock()->now().seconds(); // Set timer here
-          // GO TO THE NEXT STEP
-          current_state_ = State::ADDITIONAL_30_CM;
-          RCLCPP_INFO(
-              this->get_logger(),
-              "MOVING_TO_SHELF Finished, Transitionning to ADDITIONAL_30_CM");
-        } else {
+          if (abs(yaw) < ANGLE_THRESHOLD) {
+            // ADD OTHER IF HERE TO TEST THE 30CM INCREMENT
+            cmd_msg.linear.x = 0.0;
+            cmd_msg.angular.z = 0.0;
+            // approach_done !!!!
+            approach_done = true;
+            last_triggered_time =
+                this->get_clock()->now().seconds(); // Set timer here
+            // GO TO THE NEXT STEP
+            current_state_ = State::ADDITIONAL_30_CM;
+            RCLCPP_INFO(
+                this->get_logger(),
+                "MOVING_TO_SHELF Finished, Transitionning to ADDITIONAL_30_CM");
+          }
+          // when at the right distance from the shelf's frame origin, orient
+          // the robot correctly with respect to shelf's frame orientation
+          // before moving to the next state
+          else {
+            cmd_msg.linear.x = 0.0;
+            cmd_msg.angular.z =
+                std::min(MAX_ANGULAR_VEL, yaw * ANGLE_KP * (-1));
+          }
+
+        } else if (acos(-trans_x / cart_distance) > 0.01) {
           cmd_msg.linear.x =
               std::min(MAX_LINEAR_VEL, cart_distance * DISTANCE_KP);
-          cmd_msg.angular.z = std::min(MAX_ANGULAR_VEL, yaw * ANGLE_KP * (-1));
+          // Calculation of the orientation offset between the chassis and
+          // the Point of origin of the shelf To make the robot point to the
+          // shelf's origin.
+          float trans_x = transform_stamped2.transform.translation.x;
+          cmd_msg.angular.z = std::min(MAX_ANGULAR_VEL,
+                                       acos(-trans_x / cart_distance) * (-1.0));
+        } else {
         }
       }
       // catch error if cart_frame isn't broadcasted yet (which is the case in
@@ -333,9 +350,9 @@ private:
   static constexpr double ANGLE_KP = 0.8;
   static constexpr double MAX_LINEAR_VEL = 0.4;
   static constexpr double MAX_ANGULAR_VEL = 0.4;
-  static constexpr double DISTANCE_THRESHOLD = 0.08;
-  static constexpr double ANGLE_THRESHOLD = 0.04;
-  static constexpr double T_INTERVAL_30CM = 1.0;
+  static constexpr double DISTANCE_THRESHOLD = 0.2;
+  static constexpr double ANGLE_THRESHOLD = 0.08;
+  static constexpr double T_INTERVAL_30CM = 1.5;
 
   // service, publishers and subscribers
   rclcpp::Service<custom_interfaces::srv::GoToLoading>::SharedPtr
