@@ -68,9 +68,19 @@ ament_target_dependencies(attachserver_component
 rclcpp_components_register_nodes(attachserver_component "my_components::AttachServer")
 set(node_plugins "${node_plugins}my_components::AttachServer;$<TARGET_FILE:attachserver_component>\n")
 
+add_library(attachclient_component SHARED src/attachclient_component.cpp)
+target_compile_definitions(attachclient_component PRIVATE "COMPOSITION_BUILDING_DLL")
+ament_target_dependencies(attachclient_component
+  "std_srvs"
+  "rclcpp"
+  "rclcpp_components"
+  "custom_interfaces")
+rclcpp_components_register_nodes(attachclient_component "my_components::AttachClient")
+set(node_plugins "${node_plugins}my_components::AttachClient;$<TARGET_FILE:attachclient_component>\n")
+
 install(TARGETS
   attachserver_component
-  preapproach_component
+  attachclient_component
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
