@@ -79,6 +79,7 @@ rclcpp_components_register_nodes(attachclient_component "my_components::AttachCl
 set(node_plugins "${node_plugins}my_components::AttachClient;$<TARGET_FILE:attachclient_component>\n")
 
 install(TARGETS
+  preapproach_component
   attachserver_component
   attachclient_component
   ARCHIVE DESTINATION lib
@@ -88,5 +89,9 @@ install(TARGETS
 install(TARGETS
   manual_composition
   DESTINATION lib/${PROJECT_NAME})
+
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME})
 
 ament_package()

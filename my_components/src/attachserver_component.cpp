@@ -76,6 +76,8 @@ void AttachServer::handle_approach_request(
   attach_to_shelf_ = request->attach_to_shelf;
   current_response_ = response;
 
+  current_response_->complete = true;
+
   completion_timer_ = create_wall_timer(
       100ms, std::bind(&AttachServer::check_completion, this));
 }
@@ -86,12 +88,6 @@ void AttachServer::check_completion() {
   }
 
   if (current_state_ == State::ATTACH_TO_SHELF && shelf_attach_done) {
-    current_response_->complete = true;
-    completion_timer_->cancel();
-    RCLCPP_INFO(this->get_logger(), "Approach service now complete");
-  }
-
-  if (!attach_to_shelf_ && published_shelf_tf) {
     current_response_->complete = true;
     completion_timer_->cancel();
     RCLCPP_INFO(this->get_logger(), "Approach service now complete");

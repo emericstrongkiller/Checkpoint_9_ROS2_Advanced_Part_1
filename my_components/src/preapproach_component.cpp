@@ -101,11 +101,9 @@ void PreApproach::handleTurningState() {
   if (angle_turned >= target_angle) {
     // Turning completed
     current_state_ = State::COMPLETED;
-    RCLCPP_INFO(this->get_logger(),
-                "Turn completed (%.2f degrees). Shutting down...",
+    RCLCPP_INFO(this->get_logger(), "Turn completed (%.2f degrees) !!",
                 angle_turned * 180.0 / M_PI);
     stopRobot();
-    rclcpp::shutdown();
   }
 }
 

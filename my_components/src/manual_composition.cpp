@@ -1,6 +1,7 @@
 #include <memory>
 
 #include "my_components/attachserver_component.hpp"
+#include "rclcpp/executors/multi_threaded_executor.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 int main(int argc, char *argv[]) {
@@ -9,7 +10,7 @@ int main(int argc, char *argv[]) {
 
   rclcpp::init(argc, argv);
 
-  rclcpp::executors::SingleThreadedExecutor exec;
+  rclcpp::executors::MultiThreadedExecutor exec;
   rclcpp::NodeOptions options;
 
   // Add some nodes to the executor which provide work for the executor during
